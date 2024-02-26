@@ -67,29 +67,56 @@ vector<int> LinuxParser::Pids() {
 }
 
 // TODO: Read and return the system memory utilization
-float LinuxParser::MemoryUtilization() { 
-  float MemTotal, MemFree;
-  string line;
-  string key;
+float LinuxParser::MemoryUtilization() {
+  std::string memTotal, memFree, value;
+  std::string line;
+  std::string key;
   std::ifstream file(kProcDirectory + kMeminfoFilename);
-  if(file.is_open()){
-    std::getline(file, line);
-    std::replace(line.begin(), line.end(), ':', ' ');
-    std::istringstream linestream(line);
-    while(linestream >> key >> MemTotal){
-      if(key == "MemTotal"){
-         std::cout << MemTotal << std::endl;
-        std::replace(line.begin(), line.end(), ' ', ':');
+  if (file.is_open()) {
+      while (std::getline(file, line)) {
+          std::replace(line.begin(), line.end(), ':', ' ');
+          std::istringstream linestream(line);
+          linestream >> key >> value;
+          if (key == "MemTotal") {
+              //std::cout << "MemTotal: " << value << std::endl; // Debug print
+              memTotal = value;
+          } else if (key == "MemFree") {
+              //std::cout << "MemFree: " << value << std::endl; // Debug print
+              memFree = value;
+              break; // No need to continue reading the file
+          }
       }
-    }
   }
-  return MemTotal; }
+  //std::cout << "memTotal: " << memTotal << ", memFree: " << memFree << std::endl; // Debug print
+  return (std::stof(memTotal) - std::stof(memFree)) / std::stof(memTotal);
+}
 
 // TODO: Read and return the system uptime
-long LinuxParser::UpTime() { return 0; }
+long LinuxParser::UpTime() { 
+  
+  std::string upTime, line, key, value;
+  std::ifstream stream(kProcDirectory + kUptimeFilename);
+  if(stream.is_open()){
+    std::getline(stream, line);
+    std::istringstream streamline(line);
+    streamline >> upTime;
+    // std::cout << upTime << std::endl; // Debug print
+    
+  }
+  return stol(upTime); }
 
 // TODO: Read and return the number of jiffies for the system
-long LinuxParser::Jiffies() { return 0; }
+long LinuxParser::Jiffies() { 
+  vector<string> jiffValues = LinuxParser::CpuUtilization();
+  vector<long> kk;
+  long total = 0;
+  vector<CPUStates> names= {kUser_, kNice_, kSystem_, kIdle_, kIOwait_, kIRQ_, kSoftIRQ_, kSteal_};
+  for (auto i : names){
+    kk[i] = std::stol(jiffValues[i]);
+    total += kk[i];
+  }
+  
+  return total; }
 
 // TODO: Read and return the number of active jiffies for a PID
 // REMOVE: [[maybe_unused]] once you define the function
@@ -102,13 +129,55 @@ long LinuxParser::ActiveJiffies() { return 0; }
 long LinuxParser::IdleJiffies() { return 0; }
 
 // TODO: Read and return CPU utilization
-vector<string> LinuxParser::CpuUtilization() { return {}; }
+vector<string> LinuxParser::CpuUtilization() { 
+  
+  string key, value, line;
+  vector<string> values;
+  std::ifstream stream(kProcDirectory + kStatFilename);
+  if(stream.is_open()){
+    std::getline(stream, line);
+    std::istringstream streamline(line);
+    while(streamline >> key >> value){
+      values.push_back(value);
+    }
+
+  }
+  return {values}; }
 
 // TODO: Read and return the total number of processes
-int LinuxParser::TotalProcesses() { return 0; }
+int LinuxParser::TotalProcesses() { 
+  
+  string line, key, value;
+  string totProc;
+  std::ifstream stream(kProcDirectory + kStatFilename);
+  if(stream.is_open()) {
+    while(std::getline(stream, line)) {
+      std::istringstream linestream(line);
+      linestream >> key >> value;
+      if(key == "processes") {
+          totProc = value;
+        }
+      }
+    }
+  
+  return std::stoi(totProc);
+   }
 
 // TODO: Read and return the number of running processes
-int LinuxParser::RunningProcesses() { return 0; }
+int LinuxParser::RunningProcesses() { 
+  string key, value, runProc, line;
+  std::ifstream stream(kProcDirectory + kStatFilename);
+  if(stream.is_open()){
+    while(std::getline(stream, line)){
+      std::istringstream linestream(line);
+      linestream >> key >> value;
+      if(key == "procs_running"){
+        runProc = value;
+      }
+
+    }
+  }
+  return std::stoi(runProc); }
 
 // TODO: Read and return the command associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
